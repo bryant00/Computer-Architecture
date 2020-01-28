@@ -60,7 +60,10 @@ but you'll have to implement those three above instructions first!
 ## Step 0: IMPORTANT: inventory what is here!
 
 * Make a list of files here.
+cpu.py, ls8.py
 * Write a short 3-10-word description of what each file does.
+cpu.py: cpu Class with methods load, alu, trace and run
+ls8.py: ls8 cpu instance
 * Note what has been implemented, and what hasn't.
 * Read this whole file.
 * Skim the spec.
