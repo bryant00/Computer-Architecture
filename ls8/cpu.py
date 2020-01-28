@@ -6,23 +6,17 @@ import sys
 class CPU:
     """Main CPU class."""
 
-    PC = 0
-    SP = 6
-    IS = 5
-    IM = 4
-
     def __init__(self):
         """Construct a new CPU."""
-        # 256 bytes of memory
-        self.ram = [0] * 256
-        # 8 general purpose registers
-        self.registers = [0] * 8
-        # internal registers may need
-        # self.IM = self.registers[self.IMr]
-        # self.IS = self.registers[self.ISr]
-        # self.SP = self.registers[self.SPr]
-        # self.PC = self.registers[self.PCr]
-        self.operations = {"PRN": 0b01000111, "LDI": 0b10000010, "HLT": 0b00000001}
+        self.ram = [0] * 256  # 256 bytes of memory
+        self.reg = [0] * 8  # 8 general-purpose registers
+        self.pc = 0
+
+    def ram_read(self, address):
+        return self.ram[address]
+
+    def ram_write(self, value, address):
+        self.ram[address] = value
 
     def load(self):
         """Load a program into memory."""
@@ -44,17 +38,6 @@ class CPU:
         for instruction in program:
             self.ram[address] = instruction
             address += 1
-
-    # accept the address to read and return the value stored there
-    def ram_read(self, mar):
-        value = self.ram[mar]
-        return value
-
-    # accept a value to write, and the address to write it to
-    def ram_write(self, value, mdr):
-        memory = self.ram[mdr]
-        memory = value
-        return memory
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -90,21 +73,24 @@ class CPU:
         print()
 
     def run(self):
-        while True:
-            # read the memory address that's stored in register and and store that result in IR
-            ir = self.PC
-            # read the bytes at PC+1 and PC+2 from RAM into variables operand_a and operand_b in case the instruction needs them.
-            operand_a = self.ram_read[PCr + 1]
-            operand_b = self.ram_read[PCr + 2]
+        """Run the CPU."""
+        LDI = 0b10000010  # load "immediate", store a value in a register, or "set this register to this value"
+        PRN = 0b01000111  # print the numeric value stored in a register
+        HLT = 0b00000001  # halt the CPU and exit the emulator
 
-            # Then, depending on the value of the opcode, perform the actions needed for the instruction per the LS-8 spec. Maybe an if-elif cascade...? There are other options, too.
-            # After running code for any particular instruction, the PC needs to be updated
-            # # LDI R0,8
-            if ir == self.operations.LDI:
-                self.registers[operand_a] = operand_b
+        running = True
+
+        while running:
+            IR = self.ram[self.pc]
+
+            operand_a = self.ram_read(self.pc + 1)
+            operand_b = self.ram_read(self.pc + 2)
+
+            if IR == LDI:
+                self.reg[operand_a] = operand_b
                 self.pc += 3
-            elif ir == self.operations.PRN:
-                print(self.registers[operand_a])
+            elif IR == PRN:
+                print(self.reg[operand_a])
                 self.pc += 2
-            elif ir == self.operations.HLT:
+            elif IR == HLT:
                 running = False
