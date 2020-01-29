@@ -5,6 +5,7 @@ import sys
 LDI = 0b10000010  # load "immediate", store a value in a register, or "set this register to this value"
 PRN = 0b01000111  # print the numeric value stored in a register
 HLT = 0b00000001  # halt the CPU and exit the emulator
+MUL = 0b10100010
 
 
 class CPU:
