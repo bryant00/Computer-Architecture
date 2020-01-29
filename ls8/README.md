@@ -162,7 +162,7 @@ the console!*
 In `cpu.py`, the LS-8 programs you've been running so far have been hardcoded
 into the source. This isn't particularly user-friendly.
 
-Make changes to `cpu.py` and `ls8.py` so that the program can be specified on
+Maybeke changes to `cpu.py` and `ls8.py` so that the program can be specified on
 the command line like so:
 
 ```
