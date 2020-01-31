@@ -31,10 +31,7 @@ class CPU:
         self.branch_table[LDI] = self.handle_LDI
 
     def handle_LDI(self, operand_a, operand_b):
-        # operand_a = int(self.ram_read(self.ir + 1), 2)
-        # operand_b = int(self.ram_read(self.ir + 2), 2)
         self.reg[operand_a] = operand_b
-        # self.ir += 3
 
     def load(self):
         """Load a program into memory."""
@@ -62,7 +59,6 @@ class CPU:
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
-
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         elif op == "CMP":
@@ -121,7 +117,6 @@ class CPU:
             operand_a = self.ram_read(IR + 1)
             operand_b = self.ram_read(IR + 2)
             # print(f" IR: {IR} || SP: {SP}")
-            # instruction = self.ram_read(IR)
             if self.ram[IR] == LDI:
                 self.branch_table[LDI](operand_a, operand_b)
                 # self.ram_write(operand_a, operand_b)
