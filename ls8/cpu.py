@@ -2,13 +2,19 @@
 
 import sys
 
-LDI = 0b10000010  # load "immediate", store a value in a register, or "set this register to this value"
-PRN = 0b01000111  # print the numeric value stored in a register
-HLT = 0b00000001  # halt the CPU and exit the emulator
+LDI = 0b10000010
+PRN = 0b01000111
+HLT = 0b00000001
+ADD = 0b10100000
 MUL = 0b10100010
-PUSH = 0b01000101  # pop the value at the top of the stack into the given register
-POP = 0b01000110  # push the value in the given register on the stack
-# SP = 7
+CMP = 0b10100111
+PUSH = 0b01000101
+POP = 0b01000110
+CALL = 0b01010000
+RET = 0b00010001
+JMP = 0b01010100
+JEQ = 0b01010101
+JNE = 0b01010110
 
 
 class CPU:
@@ -16,76 +22,61 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
+        self.ram = [0] * 256
+        self.reg = [0] * 8
         self.pc = 0
-        self.ram = [0] * 256  # 256 bytes of memory
-        self.reg = [0] * 8  # 8 general-purpose registers
-        self.reg[7] = 244  # 7 registers, reg[8] is the stack pointer
-        self.fla = [0] * 8
-        self.hlt = False
-        self.ops = {
-            LDI: self.op_ldi,
-            PRN: self.op_prn,
-            HLT: self.op_hlt,
-            MUL: self.op_mul,
-            PUSH: self.op_push,
-            POP: self.op_pop,
-        }
+        self.fl = [0] * 8
 
-    def ram_read(self, address):
-        return self.ram[address]
+        self.branch_table = {}
+        self.branch_table[LDI] = self.handle_LDI
 
-    def ram_write(self, value, address):
-        self.ram[address] = value
+    def handle_LDI(self, operand_a, operand_b):
+        self.reg[operand_a] = operand_b
 
-    def load(self, blocks):
+    def load(self):
         """Load a program into memory."""
-
         address = 0
-        for block in blocks:
-            if (block[0] == "0") or (block[0] == "1"):
-                self.ram[address] = int(block[:8], 2)
-                # print(self.ram[address])
-                address += 1
+        program = []
+        if len(sys.argv) != 2:
+            print(f"usage: file.py filename", file=sys.stderr)
+            sys.exit(1)
+        try:
+            with open(sys.argv[1]) as f:
+                for line in f:
+                    comment_split = line.strip().split("#")
+                    num = comment_split[0]
+                    if num == "":
+                        continue
+                    x = int(num, 2)
+                    program.append(x)
+        except FileNotFoundError:
+            print(f"{sys.argv[0]}: {sys.argv[1]} not found")
+            sys.exit(2)
+        f.close
+        for instruction in program:
+            self.ram[address] = instruction
+            address += 1
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
-
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        elif op == "MUL":
-            self.reg[reg_a] *= self.reg[reg_b]
+        elif op == "CMP":
+            # print(f"compare {self.reg[reg_a]} to {self.reg[reg_b]}")
+            if self.reg[reg_a] < self.reg[reg_b]:
+                self.fl[-3] = 1
+                self.fl[-1], self.fl[-2] = 0, 0
+                # print(f"less than")
+            elif self.reg[reg_a] > self.reg[reg_b]:
+                self.fl[-2] = 1
+                self.fl[-1], self.fl[-3] = 0, 0
+                # print(f"greater than")
+            else:
+                self.fl[-1] = 1
+                self.fl[-2], self.fl[-3] = 0, 0
+                # print(f"equal to")
         else:
             raise Exception("Unsupported ALU operation")
-
-    def op_ldi(self, address, value):
-        # operand_a = self.ram[self.pc + 1]  # targeted register
-        # operand_b = self.ram[self.pc + 2]  # value to load
-        # self.reg[operand_a] = operand_b
-        self.reg[address] = value
-
-    def op_prn(self, address, op_b):  # op a/b
-        print(self.reg[address])  # op_a acts as address
-
-    def op_hlt(self, op_a, op_b):
-        self.hlt = True
-
-    def op_mul(self, operand_a, operand_b):
-        self.alu("MUL", operand_a, operand_b)
-
-    def op_push(self, operand_a, operand_b):
-        # print("reg", self.reg)
-        # print("push", self.reg[7])
-        self.reg[7] -= 1  # decrement stack pointer
-        sp = self.reg[7]  # sp variable
-        self.ram[sp] = self.reg[operand_a]
-
-    def op_pop(self, operand_a, operand_b):
-        # print("reg", self.reg)
-        # print("pop", self.reg[7])
-        sp = self.reg[7]  # sp variable
-        operand_b = self.ram[sp]
-        self.reg[operand_a] = operand_b
-        self.reg[7] += 1  # increment stack pointer
 
     def trace(self):
         """
@@ -108,19 +99,88 @@ class CPU:
 
         for i in range(8):
             print(" %02X" % self.reg[i], end="")
-
         print()
+
+    def ram_read(self, count):
+        return self.ram[count]
+
+    def ram_write(self, address, value):
+        self.ram[address] = value
 
     def run(self):
         """Run the CPU."""
-        while self.hlt == False:
-            ir = self.ram[self.pc]  # set internal register to the program counter index
-            operand_a = self.ram_read(self.pc + 1)  # next program counter index
-            operand_b = self.ram_read(self.pc + 2)  # next next program counter index
-            op_size = ir >> 6  # op_size internal register 6 bits to the right
-            ins_set = ((ir >> 4) & 0b1) == 1
-            if ir in self.ops:
-                self.ops[ir](operand_a, operand_b)
-            if not ins_set:
-                self.pc += op_size + 1
-            # self.trace()
+        self.load()
+        IR = self.pc
+        SP = 243
+        running = True
+        while running:
+            operand_a = self.ram_read(IR + 1)
+            operand_b = self.ram_read(IR + 2)
+            # print(f" IR: {IR} || SP: {SP}")
+            if self.ram[IR] == LDI:
+                self.branch_table[LDI](operand_a, operand_b)
+                # self.ram_write(operand_a, operand_b)
+                IR += 3
+
+            elif self.ram[IR] == PRN:
+                # print(f"PRINTING: {self.ram[self.ram[IR+1]]}")
+                print(f"PRINTING: {self.reg[operand_a]}")
+                # print(self.ram)
+                IR += 2
+
+            elif self.ram[IR] == MUL:
+                temp = self.ram_read(operand_a) * self.ram_read(operand_b)
+                print(f"{self.ram_read(operand_a)} X {self.ram_read(operand_b)}")
+                self.ram_write(operand_a, temp)
+                IR += 3
+
+            elif self.ram[IR] == CMP:
+                self.alu("CMP", operand_a, operand_b)
+                IR += 3
+
+            elif self.ram[IR] == PUSH:
+                SP -= 1
+                item = self.ram_read(operand_a)
+                self.ram_write(SP, item)
+                IR += 2
+
+            elif self.ram[IR] == POP:
+                item = self.ram_read(SP)
+                self.ram_write(operand_a, item)
+                SP += 1
+                IR += 2
+
+            elif self.ram[IR] == CALL:
+                SP -= 1
+                self.ram_write(SP, IR)
+                IR = self.ram_read(operand_a)
+
+            elif self.ram[IR] == RET:
+                IR = self.ram_read(SP) + 2
+
+            elif self.ram[IR] == JMP:
+                IR = self.reg[operand_a]
+
+            elif self.ram[IR] == JEQ:
+                if self.fl[-1] == 1:
+                    IR = self.reg[operand_a]
+                else:
+                    IR += 2
+
+            elif self.ram[IR] == JNE:
+                if self.fl[-1] == 0:
+                    IR = self.reg[operand_a]
+                else:
+                    IR += 2
+
+            elif self.ram[IR] == ADD:
+                temp = self.ram_read(operand_a) + self.ram_read(operand_b)
+                self.ram_write(operand_a, temp)
+                IR += 3
+
+            elif self.ram[IR] == HLT:
+                running = False
+
+            else:
+                print(f"unrecognized input")
+                IR += 1
