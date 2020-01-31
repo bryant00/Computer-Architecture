@@ -66,19 +66,19 @@ class CPU:
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         elif op == "CMP":
-            print(f"compare {self.reg[reg_a]} to {self.reg[reg_b]}")
+            # print(f"compare {self.reg[reg_a]} to {self.reg[reg_b]}")
             if self.reg[reg_a] < self.reg[reg_b]:
                 self.fl[-3] = 1
                 self.fl[-1], self.fl[-2] = 0, 0
-                print(f"less than")
+                # print(f"less than")
             elif self.reg[reg_a] > self.reg[reg_b]:
                 self.fl[-2] = 1
                 self.fl[-1], self.fl[-3] = 0, 0
-                print(f"greater than")
+                # print(f"greater than")
             else:
                 self.fl[-1] = 1
                 self.fl[-2], self.fl[-3] = 0, 0
-                print(f"equal to")
+                # print(f"equal to")
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -121,14 +121,15 @@ class CPU:
             operand_a = self.ram_read(IR + 1)
             operand_b = self.ram_read(IR + 2)
             # print(f" IR: {IR} || SP: {SP}")
-            instruction = self.ram_read(IR)
+            # instruction = self.ram_read(IR)
             if self.ram[IR] == LDI:
                 self.branch_table[LDI](operand_a, operand_b)
                 # self.ram_write(operand_a, operand_b)
                 IR += 3
 
             elif self.ram[IR] == PRN:
-                print(f"PRINTING: {self.ram[self.ram[IR+1]]}")
+                # print(f"PRINTING: {self.ram[self.ram[IR+1]]}")
+                print(f"PRINTING: {self.reg[operand_a]}")
                 # print(self.ram)
                 IR += 2
 
@@ -161,6 +162,21 @@ class CPU:
 
             elif self.ram[IR] == RET:
                 IR = self.ram_read(SP) + 2
+
+            elif self.ram[IR] == JMP:
+                IR = self.reg[operand_a]
+
+            elif self.ram[IR] == JEQ:
+                if self.fl[-1] == 1:
+                    IR = self.reg[operand_a]
+                else:
+                    IR += 2
+
+            elif self.ram[IR] == JNE:
+                if self.fl[-1] == 0:
+                    IR = self.reg[operand_a]
+                else:
+                    IR += 2
 
             elif self.ram[IR] == ADD:
                 temp = self.ram_read(operand_a) + self.ram_read(operand_b)
