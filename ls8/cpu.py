@@ -5,12 +5,16 @@ import sys
 LDI = 0b10000010
 PRN = 0b01000111
 HLT = 0b00000001
+ADD = 0b10100000
 MUL = 0b10100010
+CMP = 0b10100111
 PUSH = 0b01000101
 POP = 0b01000110
 CALL = 0b01010000
 RET = 0b00010001
-ADD = 0b10100000
+JMP = 0b01010100
+JEQ = 0b01010101
+JNE = 0b01010110
 
 
 class CPU:
@@ -21,6 +25,7 @@ class CPU:
         self.ram = [0] * 256
         self.reg = [0] * 8
         self.pc = 0
+        self.fl = [0] * 8
 
     def load(self):
         """Load a program into memory."""
@@ -51,7 +56,17 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        # elif op == "SUB": etc
+        elif op == "CMP":
+            if self.reg[reg_a] < self.reg[reg_b]:
+                self.fl[-3] = 1
+                self.fl[-1], self.fl[-2] = 0, 0
+            elif self.reg[reg_a] > self.reg[reg_b]:
+                self.fl[-2] = 1
+                self.fl[-1], self.fl[-3] = 0, 0
+            else:
+                self.fl[-1] = 1
+                self.fl[-2], self.fl[-3] = 0, 0
+            print(f"CMP: {self.fl}")
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -108,6 +123,23 @@ class CPU:
                 temp = self.ram_read(operand_a) * self.ram_read(operand_b)
                 print(f"{self.ram_read(operand_a)} X {self.ram_read(operand_b)}")
                 self.ram_write(operand_a, temp)
+                IR += 3
+
+            elif self.ram[IR] == CMP:
+                target_reg_a = self.ram_read(operand_a)
+                target_reg_b = self.ram_read(operand_b)
+                print(f"target_reg_a: {target_reg_a} target_reg_b: {target_reg_b}")
+                print(f"reg {self.reg}")
+                if self.reg[target_reg_a] < self.reg[target_reg_b]:
+                    self.fl[-3] = 1
+                    self.fl[-1], self.fl[-2] = 0, 0
+                elif self.reg[target_reg_a] > self.reg[target_reg_b]:
+                    self.fl[-2] = 1
+                    self.fl[-1], self.fl[-3] = 0, 0
+                else:
+                    self.fl[-1] = 1
+                    self.fl[-2], self.fl[-3] = 0, 0
+                print(f"CMP: {self.fl}")
                 IR += 3
 
             elif self.ram[IR] == PUSH:
