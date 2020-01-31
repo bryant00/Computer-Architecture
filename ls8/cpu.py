@@ -6,6 +6,9 @@ LDI = 0b10000010  # load "immediate", store a value in a register, or "set this 
 PRN = 0b01000111  # print the numeric value stored in a register
 HLT = 0b00000001  # halt the CPU and exit the emulator
 MUL = 0b10100010
+PUSH = 0b01000101  # pop the value at the top of the stack into the given register
+POP = 0b01000110  # push the value in the given register on the stack
+# SP = 7
 
 
 class CPU:
@@ -13,16 +16,19 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
+        self.pc = 0
         self.ram = [0] * 256  # 256 bytes of memory
         self.reg = [0] * 8  # 8 general-purpose registers
-        self.pc = 0
-        self.reg[7] = 255
+        self.reg[7] = 244  # 7 registers, reg[8] is the stack pointer
+        self.fla = [0] * 8
         self.hlt = False
         self.ops = {
             LDI: self.op_ldi,
             PRN: self.op_prn,
             HLT: self.op_hlt,
             MUL: self.op_mul,
+            PUSH: self.op_push,
+            POP: self.op_pop,
         }
 
     def ram_read(self, address):
@@ -52,6 +58,9 @@ class CPU:
             raise Exception("Unsupported ALU operation")
 
     def op_ldi(self, address, value):
+        # operand_a = self.ram[self.pc + 1]  # targeted register
+        # operand_b = self.ram[self.pc + 2]  # value to load
+        # self.reg[operand_a] = operand_b
         self.reg[address] = value
 
     def op_prn(self, address, op_b):  # op a/b
@@ -62,6 +71,21 @@ class CPU:
 
     def op_mul(self, operand_a, operand_b):
         self.alu("MUL", operand_a, operand_b)
+
+    def op_push(self, operand_a, operand_b):
+        # print("reg", self.reg)
+        # print("push", self.reg[7])
+        self.reg[7] -= 1  # decrement stack pointer
+        sp = self.reg[7]  # sp variable
+        self.ram[sp] = self.reg[operand_a]
+
+    def op_pop(self, operand_a, operand_b):
+        # print("reg", self.reg)
+        # print("pop", self.reg[7])
+        sp = self.reg[7]  # sp variable
+        operand_b = self.ram[sp]
+        self.reg[operand_a] = operand_b
+        self.reg[7] += 1  # increment stack pointer
 
     def trace(self):
         """
@@ -89,34 +113,14 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
-        LDI = 0b10000010
-        PRN = 0b01000111
-        HLT = 0b00000001
-
         while self.hlt == False:
-            ir = self.ram[self.pc]
-
-            operand_a = self.ram_read(self.pc + 1)
-            operand_b = self.ram_read(self.pc + 2)
-            op_size = ir >> 6
+            ir = self.ram[self.pc]  # set internal register to the program counter index
+            operand_a = self.ram_read(self.pc + 1)  # next program counter index
+            operand_b = self.ram_read(self.pc + 2)  # next next program counter index
+            op_size = ir >> 6  # op_size internal register 6 bits to the right
             ins_set = ((ir >> 4) & 0b1) == 1
-
             if ir in self.ops:
                 self.ops[ir](operand_a, operand_b)
             if not ins_set:
                 self.pc += op_size + 1
-            self.trace()
-            # if not ins_set:
-            #     self.pc += op_size + 1
-
-            # if IR == LDI:
-            #     self.reg[operand_a] = operand_b
-            #     self.pc += 3
-            # elif IR == PRN:
-            #     print(self.reg[operand_a])
-            #     self.pc += 2
-            # elif IR == MUL:
-            #     self.reg[operand_a] *= operand_b
-            #     self.pc += 2
-            # elif IR == HLT:
-            #     running = False
+            # self.trace()
