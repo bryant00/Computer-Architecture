@@ -27,6 +27,15 @@ class CPU:
         self.pc = 0
         self.fl = [0] * 8
 
+        self.branch_table = {}
+        self.branch_table[LDI] = self.handle_LDI
+
+    def handle_LDI(self, operand_a, operand_b):
+        # operand_a = int(self.ram_read(self.ir + 1), 2)
+        # operand_b = int(self.ram_read(self.ir + 2), 2)
+        self.reg[operand_a] = operand_b
+        # self.ir += 3
+
     def load(self):
         """Load a program into memory."""
         address = 0
@@ -57,16 +66,19 @@ class CPU:
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         elif op == "CMP":
+            print(f"compare {self.reg[reg_a]} to {self.reg[reg_b]}")
             if self.reg[reg_a] < self.reg[reg_b]:
                 self.fl[-3] = 1
                 self.fl[-1], self.fl[-2] = 0, 0
+                print(f"less than")
             elif self.reg[reg_a] > self.reg[reg_b]:
                 self.fl[-2] = 1
                 self.fl[-1], self.fl[-3] = 0, 0
+                print(f"greater than")
             else:
                 self.fl[-1] = 1
                 self.fl[-2], self.fl[-3] = 0, 0
-            print(f"CMP: {self.fl}")
+                print(f"equal to")
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -109,9 +121,10 @@ class CPU:
             operand_a = self.ram_read(IR + 1)
             operand_b = self.ram_read(IR + 2)
             # print(f" IR: {IR} || SP: {SP}")
-
+            instruction = self.ram_read(IR)
             if self.ram[IR] == LDI:
-                self.ram_write(operand_a, operand_b)
+                self.branch_table[LDI](operand_a, operand_b)
+                # self.ram_write(operand_a, operand_b)
                 IR += 3
 
             elif self.ram[IR] == PRN:
@@ -126,20 +139,7 @@ class CPU:
                 IR += 3
 
             elif self.ram[IR] == CMP:
-                target_reg_a = self.ram_read(operand_a)
-                target_reg_b = self.ram_read(operand_b)
-                print(f"target_reg_a: {target_reg_a} target_reg_b: {target_reg_b}")
-                print(f"reg {self.reg}")
-                if self.reg[target_reg_a] < self.reg[target_reg_b]:
-                    self.fl[-3] = 1
-                    self.fl[-1], self.fl[-2] = 0, 0
-                elif self.reg[target_reg_a] > self.reg[target_reg_b]:
-                    self.fl[-2] = 1
-                    self.fl[-1], self.fl[-3] = 0, 0
-                else:
-                    self.fl[-1] = 1
-                    self.fl[-2], self.fl[-3] = 0, 0
-                print(f"CMP: {self.fl}")
+                self.alu("CMP", operand_a, operand_b)
                 IR += 3
 
             elif self.ram[IR] == PUSH:
